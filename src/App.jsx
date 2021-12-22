@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 // import thirdweb
 import { useWeb3 } from "@3rdweb/hooks";
@@ -10,7 +10,7 @@ const bundleDropModule = sdk.getBundleDropModule("0x6d7d6c15c9c06686BD771D321b62
 
 const App = () => {
   // Use the connectWallet hook thirdweb gives us.
-  const { connectWallet, address, error, provider } = useWeb3();
+  const { connectWallet, address, provider } = useWeb3();
   console.log("👋 Address:", address)
 
   const signer = provider ? provider.getSigner() : undefined;
