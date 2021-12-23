@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { ethers } from "ethers";
+import { useEffect, useState, useMemo } from "react";
 
 // import thirdweb
 import { useWeb3 } from "@3rdweb/hooks";
@@ -7,6 +8,8 @@ import { ThirdwebSDK } from "@3rdweb/sdk";
 const sdk = new ThirdwebSDK("rinkeby");
 
 const bundleDropModule = sdk.getBundleDropModule("0x6d7d6c15c9c06686BD771D321b62C7fE365515c6");
+
+const tokenModule = sdk.getTokenModule("0x18193cD34808156C42F01B3D1Ee1fd0bbf3fe5F3");
 
 const App = () => {
   // Use the connectWallet hook thirdweb gives us.
@@ -17,6 +20,62 @@ const App = () => {
 
   const [hasClaimedNFT, setHasClaimedNFT] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
+  const [memberTokenAmounts, setMemberTokenAmounts] = useState({});
+  const [memberAddresses, setMemberAddresses] = useState([]);
+
+  const shortenAddress = (str) => {
+    return str.substring(0, 6) + "..." + str.substring(str.length - 4);
+  };
+
+  useEffect(() => {
+    if (!hasClaimedNFT) {
+      return;
+    }
+
+    // Just like we did in the 7-airdrop-token.js file! Grab the users who hold our NFT
+    // with tokenId 0.
+    bundleDropModule
+      .getAllClaimerAddresses("0")
+      .then((addresess) => {
+        console.log("🚀 Members addresses", addresess)
+        setMemberAddresses(addresess);
+      })
+      .catch((err) => {
+        console.error("failed to get member list", err);
+      });
+  }, [hasClaimedNFT]);
+
+  useEffect(() => {
+    if (!hasClaimedNFT) {
+      return;
+    }
+
+    // Grab all the balances.
+    tokenModule
+      .getAllHolderBalances()
+      .then((amounts) => {
+        console.log("👜 Amounts", amounts)
+        setMemberTokenAmounts(amounts);
+      })
+      .catch((err) => {
+        console.error("failed to get token amounts", err);
+      });
+  }, [hasClaimedNFT]);
+
+  const memberList = useMemo(() => {
+    return memberAddresses.map((address) => {
+      return {
+        address,
+        tokenAmount: ethers.utils.formatUnits(
+          // If the address isn't in memberTokenAmounts, it means they don't
+          // hold any of our token.
+          memberTokenAmounts[address] || 0,
+          18,
+        ),
+      };
+    });
+  }, [memberAddresses, memberTokenAmounts]);
+
 
   useEffect(() => {
     // We pass the signer to the sdk, which enables us to interact with
@@ -66,8 +125,31 @@ const App = () => {
   if (hasClaimedNFT) {
     return (
       <div className="member-page">
-        <h1>👩‍🎤 DAO Member Page 👨‍🎤</h1>
+        <h1>👩‍🎤 SingerDAO Member Page 👨‍🎤</h1>
         <p>Congratulations on being a member</p>
+        <div>
+          <div>
+            <h2>Member List</h2>
+            <table className="card">
+              <thead>
+                <tr>
+                  <th>Address</th>
+                  <th>Token Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {memberList.map((member) => {
+                  return (
+                    <tr key={member.address}>
+                      <td>{shortenAddress(member.address)}</td>
+                      <td>{member.tokenAmount}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     );
   };
